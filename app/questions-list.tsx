@@ -28,6 +28,10 @@ export default function QuestionsList({
   const [loading, setLoading] = useState(false);
   const [improving, setImproving] = useState(false);
 
+  const [askQuestion, setAskQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [asking, setAsking] = useState(false);
+
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
 
@@ -115,6 +119,30 @@ export default function QuestionsList({
     }
   }
 
+  // RAG: retrieve the most relevant questions, augment a prompt with them,
+  // and stream back an answer grounded only in what the room has actually asked.
+  async function ask() {
+    if (!askQuestion.trim() || asking) return;
+    setAsking(true);
+    setAnswer("");
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: askQuestion }),
+      });
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        setAnswer((a) => a + decoder.decode(value));
+      }
+    } finally {
+      setAsking(false);
+    }
+  }
+
   async function upvote(id: string) {
     // optimistic: assume success, update the UI now
     setQuestions((qs) =>
@@ -173,6 +201,31 @@ export default function QuestionsList({
             Ask
           </button>
         </div>
+      </div>
+
+      {/* Ask the room (RAG) — answers grounded in the questions already asked */}
+      <div className="rounded-2xl border bg-surface p-4 shadow-sm">
+        <div className="flex gap-2">
+          <input
+            value={askQuestion}
+            onChange={(e) => setAskQuestion(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && ask()}
+            placeholder="Ask the room — answered from what's been asked…"
+            className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
+          />
+          <button
+            onClick={ask}
+            disabled={asking || !askQuestion.trim()}
+            className="rounded-xl bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-strong disabled:opacity-50"
+          >
+            {asking ? "Thinking…" : "Ask the room"}
+          </button>
+        </div>
+        {answer && (
+          <p className="mt-3 whitespace-pre-wrap rounded-xl bg-brand-soft/50 p-3 text-sm leading-relaxed">
+            {answer}
+          </p>
+        )}
       </div>
 
       {/* Search + mode toggle + hydration status */}
