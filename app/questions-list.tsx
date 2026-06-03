@@ -178,13 +178,19 @@ export default function QuestionsList({
     <div className="space-y-5">
       {/* Ask box */}
       <div className="rounded-2xl border bg-surface p-4 shadow-sm">
-        <div className="flex gap-2">
-          <input
+        <div className="flex items-end gap-2">
+          <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault(); // don't insert a newline
+                submit();
+              }
+            }}
+            rows={2}
             placeholder="Ask a question…"
-            className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
+            className="flex-1 resize-none field-sizing-content max-h-40 rounded-xl border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
           />
           <button
             onClick={improve}
