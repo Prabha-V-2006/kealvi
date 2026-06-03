@@ -1,33 +1,29 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "Live Q&A",
-  description: "Ask and upvote questions",
-};
+import Link from "next/link";
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en">
+      <body>
+        
+        {/* NAVBAR */}
+        <nav className="flex gap-6 p-4 border-b bg-white">
+          <Link href="/" className="font-semibold text-blue-600">
+            Q&A
+          </Link>
+
+          <Link href="/polls" className="font-semibold text-blue-600">
+            Polls
+          </Link>
+        </nav>
+
+        {/* PAGE CONTENT */}
+        {children}
+      </body>
     </html>
   );
 }
