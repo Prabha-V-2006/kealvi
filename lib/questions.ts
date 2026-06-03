@@ -21,6 +21,17 @@ export async function getQuestionsPage(offset: number, limit: number) {
   return { questions: rows.slice(0, limit), hasMore };
 }
 
+export async function getRecentQuestions(limit = 20) {
+  const { data, error } = await supabase
+    .from("questions")
+    .select("id, body, author, topic, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function searchQuestions(q: string, limit: number) {
   const { data, error } = await supabase
     .from("questions")
