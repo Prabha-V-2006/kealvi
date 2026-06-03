@@ -6,6 +6,7 @@ type Question = {
   id: string;
   body: string;
   author: string | null;
+  topic: string | null;
   votes: number;
 };
 
@@ -45,10 +46,23 @@ export default function QuestionsList({
   async function submit() {
     if (!draft.trim()) return;
 
+    // Classify first: the model returns typed JSON our code branches on —
+    // block anything not "ok", and keep the topic tag for storage + display.
+    const verdict = await fetch("/api/classify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: draft }),
+    }).then((r) => r.json());
+
+    if (verdict.status !== "ok") {
+      alert("That question was flagged.");
+      return;
+    }
+
     const res = await fetch("/api/questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: draft }),
+      body: JSON.stringify({ body: draft, topic: verdict.topic }),
     });
     const created = await res.json();
 
@@ -169,9 +183,14 @@ export default function QuestionsList({
             </button>
             <div className="min-w-0 flex-1 pt-0.5">
               <p className="leading-snug">{q.body}</p>
-              {q.author && (
-                <p className="mt-1.5 text-xs text-muted">{q.author}</p>
-              )}
+              <div className="mt-1.5 flex items-center gap-2">
+                {q.topic && (
+                  <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand">
+                    {q.topic}
+                  </span>
+                )}
+                {q.author && <span className="text-xs text-muted">{q.author}</span>}
+              </div>
             </div>
           </li>
         ))}

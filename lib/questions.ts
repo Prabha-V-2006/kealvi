@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 export async function getQuestionsPage(offset: number, limit: number) {
   const { data, error } = await supabase
     .from("questions")
-    .select("id, body, author, created_at, votes(count)")
+    .select("id, body, author, topic, created_at, votes(count)")
     .order("created_at", { ascending: false })
     .range(offset, offset + limit); // inclusive → asks for limit + 1 rows
 
@@ -13,6 +13,7 @@ export async function getQuestionsPage(offset: number, limit: number) {
     id: q.id,
     body: q.body,
     author: q.author,
+    topic: q.topic,
     votes: q.votes?.[0]?.count ?? 0,
   }));
 
@@ -23,7 +24,7 @@ export async function getQuestionsPage(offset: number, limit: number) {
 export async function searchQuestions(q: string, limit: number) {
   const { data, error } = await supabase
     .from("questions")
-    .select("id, body, author, created_at, votes(count)")
+    .select("id, body, author, topic, created_at, votes(count)")
     .textSearch("body", q, { type: "websearch", config: "english" })
     .limit(limit);
 
@@ -33,6 +34,7 @@ export async function searchQuestions(q: string, limit: number) {
     id: row.id,
     body: row.body,
     author: row.author,
+    topic: row.topic,
     votes: row.votes?.[0]?.count ?? 0,
   }));
 }

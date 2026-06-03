@@ -18,11 +18,11 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { body, author } = await req.json();
+  const { body, author, topic } = await req.json();
 
   const { data, error } = await supabase
     .from("questions")
-    .insert({ body, author })
+    .insert({ body, author, topic })
     .select()
     .single();
 
