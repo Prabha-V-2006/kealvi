@@ -21,6 +21,7 @@ export default function QuestionsList({
   const [query, setQuery] = useState("");
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
+  const [improving, setImproving] = useState(false);
 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -53,6 +54,30 @@ export default function QuestionsList({
 
     setQuestions((qs) => [{ ...created, votes: 0 }, ...qs]);
     setDraft("");
+  }
+
+  // Stream a clearer rewrite of the draft from the AI, typing it back into
+  // the box token by token — same fetch you know, the response is just a stream.
+  async function improve() {
+    if (!draft.trim() || improving) return;
+    setImproving(true);
+    try {
+      const res = await fetch("/api/improve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: draft }),
+      });
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      setDraft("");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        setDraft((d) => d + decoder.decode(value));
+      }
+    } finally {
+      setImproving(false);
+    }
   }
 
   async function upvote(id: string) {
@@ -96,6 +121,14 @@ export default function QuestionsList({
             placeholder="Ask a question…"
             className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
           />
+          <button
+            onClick={improve}
+            disabled={improving || !draft.trim()}
+            title="Rewrite this question to be clearer with AI"
+            className="rounded-xl border px-4 py-2.5 text-sm font-medium text-brand transition-colors hover:border-brand hover:bg-brand-soft disabled:opacity-50"
+          >
+            {improving ? "Improving…" : "✨ Improve"}
+          </button>
           <button
             onClick={submit}
             className="rounded-xl bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-strong"
