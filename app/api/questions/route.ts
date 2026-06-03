@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { getQuestionsPage, searchQuestions } from "@/lib/questions";
+import { embed } from "@/lib/embed";
 
 const PAGE_SIZE = 10;
 
@@ -20,9 +21,12 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const { body, author, topic } = await req.json();
 
+  // Embed the question as it's stored, so semantic search can find it later.
+  const embedding = await embed(body, "RETRIEVAL_DOCUMENT");
+
   const { data, error } = await supabase
     .from("questions")
-    .insert({ body, author, topic })
+    .insert({ body, author, topic, embedding })
     .select()
     .single();
 

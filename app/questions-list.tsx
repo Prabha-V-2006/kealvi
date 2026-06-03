@@ -20,6 +20,10 @@ export default function QuestionsList({
   const [questions, setQuestions] = useState(initialQuestions);
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<"keyword" | "semantic">("keyword");
+  const [semanticResults, setSemanticResults] = useState<
+    { id: string; body: string; similarity: number }[]
+  >([]);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
   const [improving, setImproving] = useState(false);
@@ -29,8 +33,25 @@ export default function QuestionsList({
 
   // Debounced search: wait 300ms after typing stops; each keystroke cancels
   // the previous timer, so "deploying" fires one request, not nine.
+  // Two modes, same box: keyword matches WORDS (Day 5 inverted index),
+  // semantic matches MEANING (embeddings → match_questions).
   useEffect(() => {
     const id = setTimeout(async () => {
+      if (mode === "semantic") {
+        if (!query.trim()) {
+          setSemanticResults([]);
+          return;
+        }
+        const res = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+        const data = await res.json();
+        setSemanticResults(data.results);
+        return;
+      }
+
       const url = query
         ? `/api/questions?q=${encodeURIComponent(query)}`
         : `/api/questions`;
@@ -41,7 +62,7 @@ export default function QuestionsList({
     }, 300);
 
     return () => clearTimeout(id); // cancel the pending timer on each keystroke
-  }, [query]);
+  }, [query, mode]);
 
   async function submit() {
     if (!draft.trim()) return;
@@ -123,6 +144,8 @@ export default function QuestionsList({
     setLoading(false);
   }
 
+  const showingSemantic = mode === "semantic" && query.trim().length > 0;
+
   return (
     <div className="space-y-5">
       {/* Ask box */}
@@ -152,20 +175,65 @@ export default function QuestionsList({
         </div>
       </div>
 
-      {/* Search + hydration status */}
-      <div className="flex items-center gap-3">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search questions…"
-          className="w-full flex-1 rounded-xl border bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
-        />
-        <span className="shrink-0 text-xs text-muted">
-          {hydrated ? "Interactive ✓" : "Loading interactivity…"}
-        </span>
+      {/* Search + mode toggle + hydration status */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={
+              mode === "semantic"
+                ? "Search by meaning…"
+                : "Search questions…"
+            }
+            className="w-full flex-1 rounded-xl border bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
+          />
+          <span className="shrink-0 text-xs text-muted">
+            {hydrated ? "Interactive ✓" : "Loading interactivity…"}
+          </span>
+        </div>
+        <div className="inline-flex rounded-xl border bg-surface p-0.5 text-xs font-medium">
+          {(["keyword", "semantic"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`rounded-lg px-3 py-1.5 capitalize transition-colors ${
+                mode === m
+                  ? "bg-brand text-white"
+                  : "text-muted hover:text-brand"
+              }`}
+            >
+              {m === "keyword" ? "Keyword (words)" : "Semantic (meaning)"}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Semantic results: matched by meaning, scored by similarity */}
+      {showingSemantic && (
+        <ul className="space-y-3">
+          {semanticResults.map((r) => (
+            <li
+              key={r.id}
+              className="flex items-start gap-3 rounded-2xl border bg-surface p-4 shadow-sm"
+            >
+              <span className="shrink-0 rounded-xl border border-brand bg-brand-soft px-3 py-2 text-xs font-semibold tabular-nums text-brand">
+                {(r.similarity * 100).toFixed(0)}%
+              </span>
+              <p className="min-w-0 flex-1 pt-0.5 leading-snug">{r.body}</p>
+            </li>
+          ))}
+          {semanticResults.length === 0 && (
+            <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted">
+              No questions match that meaning yet.
+            </p>
+          )}
+        </ul>
+      )}
+
       {/* Questions */}
+      {!showingSemantic && (
+      <>
       <ul className="space-y-3">
         {questions.map((q) => (
           <li
@@ -212,6 +280,8 @@ export default function QuestionsList({
             {loading ? "Loading…" : "Load more"}
           </button>
         </div>
+      )}
+      </>
       )}
     </div>
   );
