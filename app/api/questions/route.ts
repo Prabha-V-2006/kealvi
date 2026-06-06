@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   }
 
   const offset = Number(searchParams.get("offset") ?? 0);
-  const { questions, hasMore } = await getQuestionsPage(offset, PAGE_SIZE);
+  const { questions, hasMore } = await getQuestionsPage();
   return Response.json({ questions, hasMore });
 }
 

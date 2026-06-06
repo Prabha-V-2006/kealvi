@@ -1,6 +1,6 @@
 import { getPolls } from "@/lib/polls";
-import PollClient from "./PollClient";
-import CreatePollModal from "./CreatePollModal";
+import PollClient from "../PollClient";
+import CreatePollModal from "../CreatePollModal";
 
 export const dynamic = "force-dynamic";
 
